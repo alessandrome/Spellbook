@@ -25,6 +25,7 @@ wheels/
 *.egg
 MANIFEST
 .pypirc
+env.yaml
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
