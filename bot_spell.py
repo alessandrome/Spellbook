@@ -1,4 +1,6 @@
+import sys
 import time
+import yaml
 import telepot
 from telepot.loop import MessageLoop
 from telepot.delegate import per_chat_id, create_open, pave_event_space, include_callback_query_chat_id
@@ -221,8 +223,19 @@ class Handler(telepot.helper.ChatHandler):
         self._editor = telepot.helper.Editor(self.bot, sent)
 
 
+# Read the environment file
+env_doc = None
+try:
+    with open('env.yaml', 'r') as f:
+        env_doc = yaml.load(f, Loader=yaml.FullLoader)
+except:
+    sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
+
+if not env_doc or 'SECRET_BOT_TOKEN' not in env_doc:
+    sys.exit("Be sure to have the \"SECRET_BOT_TOKEN\" value set in the \"env.yaml\"")
+
 #Serious stuff
-token = "token"
+token = env_doc['SECRET_BOT_TOKEN']
 
 bot = telepot.DelegatorBot(token, [
     include_callback_query_chat_id(pave_event_space()
