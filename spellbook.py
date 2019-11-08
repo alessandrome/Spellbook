@@ -1,35 +1,39 @@
 import pymysql
-pymysql.install_as_MySQLdb()
+pymysql.install_as_MySQLdb()  # This must be init here before import MySQLdb
 import MySQLdb
 
-class obj:
-    pass
-    
-class Spellbook:
-    #Credenziali di accesso
-    userName = None
-    userPswd = None
-    url = None
-    dbName = None
-    
-    cn_object = None #Oggetto connessione al database
-    cursor = None #Cursore ottenuto da cn_object
 
-    def __init__(self,new_userName,new_userPswd,new_url,new_dbName):
-        self.url = new_url
-        self.userName = new_userName
-        self.userPswd = new_userPswd
-        self.dbName = new_dbName
-        #Mi collego al database
-        self.cn_object = MySQLdb.connect(self.url,
-                                         self.userName,
-                                         self.userPswd,
-                                         self.dbName)
+class Spellbook:
+    def __init__(self, user_name, user_pwd, url='127.0.0.1', db_name='spellbook', db_port=3306):
+        if url is None:
+            url = '127.0.0.1'
+        if db_name is None:
+            db_name = 'spellbook'
+        if db_port is None:
+            db_port = 3306
+        self.url = url
+        self.user_name = user_name
+        self.user_pwd = user_pwd
+        self.db_name = db_name
+        self.db_port = db_port
+        # TODO: Add Exception for wrong DB connection
+        # Connect to DB
+        self.cn_object = None
+        self.cursor = None
+        self.cn_object = MySQLdb.connect(
+            self.url,
+            self.user_name,
+            self.user_pwd,
+            self.db_name,
+            self.db_port
+        )
         self.cursor = self.cn_object.cursor()
 
     def __del__(self):
-        self.cn_object.close()
-        self.cursor.close()
+        if self.cn_object:
+            self.cn_object.close()
+        if self.cursor:
+            self.cursor.close()
 
     def ottieniIncantesimiDiLivello(self,lvl):
         query = ("CALL `ottieniIncantesimiDiLivello`('"+str(lvl)+"');")
