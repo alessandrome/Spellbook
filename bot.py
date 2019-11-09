@@ -46,7 +46,7 @@ def check_env_requirements(env_dict):
 
 
 MENU, NAME, LEVEL, NAME_LEVEL = range(4)
-
+LEVELS = range(10)
 
 def build_menu(buttons,
                n_cols,
@@ -62,24 +62,35 @@ def build_menu(buttons,
 
 def start(update, context):
     reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe e Livello', NAME_LEVEL)]
-    button_list = [InlineKeyboardButton(s[0], callback_data=s[1]) for s in reply_keyboard]
+    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in reply_keyboard]
 
     update.message.reply_text(
         'Ricerca incantesimo per:',
-        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 2), one_time_keyboard=True))
+        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 2)))
     return MENU
 
+
 def name_search(update, context):
+    print(update)
     query = update.callback_query
     query.edit_message_text('Ricerca incantesimo per:')
 
 
-def class_search(update, context):
+def level_search(update, context):
+    levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]), ('Lv. 4', LEVELS[4]),
+              ('Lv. 5', LEVELS[5]), ('Lv. 6', LEVELS[6]), ('Lv. 7', LEVELS[7]), ('Lv. 8', LEVELS[8]), ('Lv. 9', LEVELS[9])]
+    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in levels]
+
     query = update.callback_query
-    query.edit_message_text('Seleziona la classe per cui cercare:')
+    bot = context.bot
+    bot.send_message(
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+        text='Seleziona il livello per cui cercare:',
+        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 5)))
 
 
-def name_class_search(update, context):
+def name_level_search(update, context):
     query = update.callback_query
     query.edit_message_text('Ricerca incantesimo per classe e nome:')
 
@@ -126,9 +137,10 @@ def main():
         states={
             MENU: [
                 CallbackQueryHandler(name_search, pattern='^{}$'.format(NAME)),
-                CallbackQueryHandler(class_search, pattern='^{}$'.format(LEVEL)),
-                CallbackQueryHandler(name_class_search, pattern='^{}$'.format(NAME_LEVEL))
+                CallbackQueryHandler(level_search, pattern='^{}$'.format(LEVEL)),
+                CallbackQueryHandler(name_level_search, pattern='^{}$'.format(NAME_LEVEL))
             ],
+            LEVEL: [],
         },
 
         fallbacks=[CommandHandler('cancel', cancel)]
