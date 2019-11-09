@@ -46,6 +46,7 @@ def check_env_requirements(env_dict):
 
 
 MENU, NAME, LEVEL, NAME_LEVEL = range(4)
+BARBARIC, BARD, CLERIC, DRUID, MAGE, PALADIN, RANGER, WARLOCK, WIZARD = range(9)
 LEVELS = range(10)
 
 def build_menu(buttons,
@@ -74,6 +75,20 @@ def name_search(update, context):
     print(update)
     query = update.callback_query
     query.edit_message_text('Ricerca incantesimo per:')
+
+
+def class_search(update, context):
+    classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID), ('Mago', MAGE),
+              ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
+    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in classes]
+
+    query = update.callback_query
+    bot = context.bot
+    bot.send_message(
+        chat_id=query.message.chat_id,
+        message_id=query.message.message_id,
+        text='Seleziona il livello per cui cercare:',
+        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 5)))
 
 
 def level_search(update, context):
