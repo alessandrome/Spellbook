@@ -3,7 +3,9 @@ import yaml
 import time
 import logging
 import telegram
-from telegram import utils, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardRemove
+import botutils
+from telegram import utils, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, \
+    ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, CallbackQueryHandler, Filters
 from spellbook import Spellbook
 
@@ -125,8 +127,12 @@ def error(update, context):
 
 def main():
     # Get env variables and initialize Spellbook instance
-    env_dict = get_environment()
-    env_errors = check_env_requirements(env_dict)
+    try:
+        env_dict = botutils.get_environment()
+    except OSError as ex:
+        sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
+
+    env_errors = botutils.check_env_requirements(env_dict)
     if env_errors:
         sys.exit(env_errors)
     db_data = {
@@ -136,7 +142,9 @@ def main():
         'DB_PORT': env_dict['DB_PORT'] if 'DB_PORT' in env_dict else None,
         'DB_NAME': env_dict['DB_NAME'] if 'DB_NAME' in env_dict else None,
     }
-    spellbook = Spellbook(db_data['DB_USERNAME'], db_data['DB_PASSWORD'], url=db_data['DB_URL'], db_name=db_data['DB_NAME'], db_port=db_data['DB_PORT'])
+    spellbook = Spellbook(db_data['DB_USERNAME'], db_data['DB_PASSWORD'], url=db_data['DB_URL'],
+                          db_name=db_data['DB_NAME'], db_port=db_data['DB_PORT'])
+
     # Create the Updater and pass it your bot's token.
     # Make sure to set use_context=True to use the new context based callbacks
     # Post version 12 this will no longer be necessary
