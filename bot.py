@@ -2,74 +2,29 @@ import sys
 import yaml
 import time
 import logging
-import telegram
 import botutils
+import menubuilder
 from telegram import utils, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, \
     ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, CallbackQueryHandler, Filters
 from spellbook import Spellbook
-
 
 # Set logging level
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-# Read the environment file
-def get_environment():
-    """
-    Get environment variables.
-    :return: Dictionary with environment variables
-    """
-    env_dict = None
-    try:
-        with open('env.yaml', 'r') as f:
-            env_dict = yaml.load(f, Loader=yaml.FullLoader)
-    except OSError as ex:
-        sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
-    return env_dict
-
-
-def check_env_requirements(env_dict):
-    """
-    Check if environment dictionary has all minimum required variables.
-    :param env_dict:
-    :return: Empty string if variables are ok. String with errors description otherwise
-    """
-    errors_description = ""
-    if not env_dict or 'SECRET_BOT_TOKEN' not in env_dict:
-        errors_description += "Be sure to have the \"SECRET_BOT_TOKEN\" value set in the \"env.yaml\"\n"
-    if not env_dict or 'DB_USERNAME' not in env_dict:
-        errors_description += "Be sure to have the \"DB_USERNAME\" value set in the \"env.yaml\" to correctly connect to the DB\n"
-    if not env_dict or 'DB_PASSWORD' not in env_dict:
-        errors_description += "Be sure to have the \"DB_PASSWORD\" value set in the \"env.yaml\" to correctly connect to the DB\n"
-    return errors_description
-
-
 MENU, NAME, LEVEL, NAME_LEVEL = range(4)
 BARBARIC, BARD, CLERIC, DRUID, MAGE, PALADIN, RANGER, WARLOCK, WIZARD = range(9)
 LEVELS = range(10)
 
-def build_menu(buttons,
-               n_cols,
-               header_buttons=None,
-               footer_buttons=None):
-    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
-    if header_buttons:
-        menu.insert(0, [header_buttons])
-    if footer_buttons:
-        menu.append([footer_buttons])
-    return menu
-
 
 def start(update, context):
     reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe e Livello', NAME_LEVEL)]
-    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in reply_keyboard]
 
     update.message.reply_text(
         'Ricerca incantesimo per:',
-        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 2)))
+        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(reply_keyboard, 2)))
     return MENU
 
 
@@ -80,9 +35,8 @@ def name_search(update, context):
 
 
 def class_search(update, context):
-    classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID), ('Mago', MAGE),
-              ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
-    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in classes]
+    keyboard_classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID), ('Mago', MAGE),
+               ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
 
     query = update.callback_query
     bot = context.bot
@@ -90,13 +44,14 @@ def class_search(update, context):
         chat_id=query.message.chat_id,
         message_id=query.message.message_id,
         text='Seleziona il livello per cui cercare:',
-        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 5)))
+        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, 5)))
 
 
 def level_search(update, context):
-    levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]), ('Lv. 4', LEVELS[4]),
-              ('Lv. 5', LEVELS[5]), ('Lv. 6', LEVELS[6]), ('Lv. 7', LEVELS[7]), ('Lv. 8', LEVELS[8]), ('Lv. 9', LEVELS[9])]
-    button_list = [InlineKeyboardButton(s[0], callback_data=str(s[1])) for s in levels]
+    keyboard_levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]),
+              ('Lv. 4', LEVELS[4]),
+              ('Lv. 5', LEVELS[5]), ('Lv. 6', LEVELS[6]), ('Lv. 7', LEVELS[7]), ('Lv. 8', LEVELS[8]),
+              ('Lv. 9', LEVELS[9])]
 
     query = update.callback_query
     bot = context.bot
@@ -104,7 +59,7 @@ def level_search(update, context):
         chat_id=query.message.chat_id,
         message_id=query.message.message_id,
         text='Seleziona il livello per cui cercare:',
-        reply_markup=InlineKeyboardMarkup(build_menu(button_list, 5)))
+        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 5)))
 
 
 def name_level_search(update, context):
