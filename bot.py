@@ -19,124 +19,149 @@ BARBARIC, BARD, CLERIC, DRUID, MAGE, PALADIN, RANGER, WARLOCK, WIZARD = range(9)
 LEVELS = range(10)
 
 
-def start(update, context):
-    reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe e Livello', NAME_LEVEL)]
-
-    update.message.reply_text(
-        'Ricerca incantesimo per:',
-        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(reply_keyboard, 2)))
-    return MENU
-
-
-def name_search(update, context):
-    print(update)
-    query = update.callback_query
-    query.edit_message_text('Ricerca incantesimo per:')
-
-
-def class_search(update, context):
-    keyboard_classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID), ('Mago', MAGE),
-               ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
-
-    query = update.callback_query
-    bot = context.bot
-    bot.send_message(
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-        text='Seleziona il livello per cui cercare:',
-        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, 5)))
-
-
-def level_search(update, context):
-    keyboard_levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]),
-              ('Lv. 4', LEVELS[4]),
-              ('Lv. 5', LEVELS[5]), ('Lv. 6', LEVELS[6]), ('Lv. 7', LEVELS[7]), ('Lv. 8', LEVELS[8]),
-              ('Lv. 9', LEVELS[9])]
-
-    query = update.callback_query
-    bot = context.bot
-    bot.send_message(
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-        text='Seleziona il livello per cui cercare:',
-        reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 5)))
-
-
-def name_level_search(update, context):
-    query = update.callback_query
-    query.edit_message_text('Ricerca incantesimo per classe e nome:')
-
-
-def cancel(update, context):
-    user = update.message.from_user
-    logger.info("User %s canceled the conversation.", user.first_name)
-    update.message.reply_text('Ciao! Spero di riverderti qui!',
-                              reply_markup=ReplyKeyboardRemove())
-    return ConversationHandler.END
-
-
-def error(update, context):
-    """Log Errors caused by Updates."""
-    logger.warning('Update "%s" caused error "%s"', update, context.error)
-
-
 def main():
-    # Get env variables and initialize Spellbook instance
     try:
-        env_dict = botutils.get_environment()
+        spellbook_bot = SpellbookBot()
     except OSError as ex:
         sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
-
-    env_errors = botutils.check_env_requirements(env_dict)
-    if env_errors:
-        sys.exit(env_errors)
-    db_data = {
-        'DB_USERNAME': env_dict['DB_USERNAME'],
-        'DB_PASSWORD': env_dict['DB_PASSWORD'],
-        'DB_URL': env_dict['DB_URL'] if 'DB_URL' in env_dict else None,
-        'DB_PORT': env_dict['DB_PORT'] if 'DB_PORT' in env_dict else None,
-        'DB_NAME': env_dict['DB_NAME'] if 'DB_NAME' in env_dict else None,
-    }
-    spellbook = Spellbook(db_data['DB_USERNAME'], db_data['DB_PASSWORD'], url=db_data['DB_URL'],
-                          db_name=db_data['DB_NAME'], db_port=db_data['DB_PORT'])
-
-    # Create the Updater and pass it your bot's token.
-    # Make sure to set use_context=True to use the new context based callbacks
-    # Post version 12 this will no longer be necessary
-    updater = Updater(env_dict['SECRET_BOT_TOKEN'], use_context=True)
-
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
-
-    # Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-
-        states={
-            MENU: [
-                CallbackQueryHandler(name_search, pattern='^{}$'.format(NAME)),
-                CallbackQueryHandler(level_search, pattern='^{}$'.format(LEVEL)),
-                CallbackQueryHandler(name_level_search, pattern='^{}$'.format(NAME_LEVEL))
-            ],
-            LEVEL: [],
-        },
-
-        fallbacks=[CommandHandler('cancel', cancel)]
-    )
-
-    dp.add_handler(conv_handler)
-
-    # log all errors
-    dp.add_error_handler(error)
-
-    # Start the Bot
-    updater.start_polling()
-    logger.info('Bot Started!')
+    updater = spellbook_bot.start()
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
+    # updater.idle()
+
+    while True:
+        user_input = input()
+        if user_input == 'start':
+            spellbook_bot.start()
+        elif user_input == 'stop':
+            spellbook_bot.stop()
+        elif user_input == 'exit':
+            spellbook_bot.stop()
+            exit()
+        else:
+            print('Command not found')
+
+
+class SpellbookBot:
+    def __init__(self, log_level=None):
+        self.env_dict = botutils.get_environment()
+        self._logger = botutils.set_logging(log_level)
+        self._token = self.env_dict['SECRET_BOT_TOKEN']
+        self.db_data = {
+            'DB_USERNAME': self.env_dict['DB_USERNAME'],
+            'DB_PASSWORD': self.env_dict['DB_PASSWORD'],
+            'DB_URL': self.env_dict['DB_URL'] if 'DB_URL' in self.env_dict else None,
+            'DB_PORT': self.env_dict['DB_PORT'] if 'DB_PORT' in self.env_dict else None,
+            'DB_NAME': self.env_dict['DB_NAME'] if 'DB_NAME' in self.env_dict else None,
+        }
+        self.spellbook = Spellbook(self.db_data['DB_USERNAME'], self.db_data['DB_PASSWORD'], url=self.db_data['DB_URL'],
+                                   db_name=self.db_data['DB_NAME'], db_port=self.db_data['DB_PORT'])
+        self._updater = None
+        self._dispatcher = None
+        self._conversation_handler = None
+        self._last_message = None
+        self._conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', self.callback_start)],
+            states={
+                MENU: [
+                    CallbackQueryHandler(self.callback_name_search, pattern='^{}$'.format(NAME)),
+                    CallbackQueryHandler(self.callback_level_search, pattern='^{}$'.format(LEVEL)),
+                    CallbackQueryHandler(self.callback_name_level_search, pattern='^{}$'.format(NAME_LEVEL))
+                ],
+                LEVEL: [],
+            },
+            fallbacks=[CommandHandler('cancel', self.callback_cancel)]
+    )
+
+    def _delete_last_message(self):
+        if self._last_message:
+            self._last_message.delete()
+            self._last_message = None
+
+    def start(self):
+        if self._updater is None:
+            # Create the Updater and pass it your bot's token.
+            # Make sure to set use_context=True to use the new context based callbacks
+            # Post version 12 this will no longer be necessary
+            self._updater = Updater(self._token, use_context=True)
+            # Get the dispatcher to register handlers
+            self._dispatcher = self._updater.dispatcher
+            self._dispatcher.add_handler(self._conv_handler)
+            self._dispatcher.add_error_handler(self._dispatcher_error_handler)
+            self._updater.start_polling()
+            self._logger.info('Bot Started!')
+        else:
+            self._logger.warning("The BOT is already Up!")
+        return self._updater
+
+    def stop(self):
+        if self._updater is not None:
+            self._updater.stop()
+            self._updater = None
+            self._dispatcher = None
+            self._logger.info('Bot Stopped')
+        else:
+            self._logger.warning('Bot is not Up yet')
+
+    def _dispatcher_error_handler(self, update, context):
+        self._logger.warning('Update "%s" caused error "%s"', update, context.error)
+
+    # Callback responses
+    def callback_start(self, update, context):
+        self._logger.debug("Starting Spellbook bot")
+        reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe e Livello', NAME_LEVEL)]
+        update.message.reply_text(
+            'Ricerca incantesimo per:',
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(reply_keyboard, 2)))
+        return MENU
+
+    def callback_name_search(self, update, context):
+        self._logger.debug("Search by name")
+        query = update.callback_query
+        query.edit_message_text('Ricerca incantesimo per:')
+
+    def callback_class_search(self, update, context):
+        self._logger.debug("Search by class")
+        keyboard_classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID),
+                            ('Mago', MAGE),
+                            ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
+
+        query = update.callback_query
+        bot = context.bot
+        bot.send_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text='Seleziona il livello per cui cercare:',
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, 5)))
+
+    def callback_level_search(self, update, context):
+        self._logger.debug("Search by level")
+        keyboard_levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]),
+                           ('Lv. 4', LEVELS[4]),
+                           ('Lv. 5', LEVELS[5]), ('Lv. 6', LEVELS[6]), ('Lv. 7', LEVELS[7]), ('Lv. 8', LEVELS[8]),
+                           ('Lv. 9', LEVELS[9])]
+
+        query = update.callback_query
+        bot = context.bot
+        bot.send_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text='Seleziona il livello per cui cercare:',
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 5)))
+
+    def callback_name_level_search(self, update, context):
+        self._logger.debug("Search by level name")
+        query = update.callback_query
+        query.edit_message_text('Ricerca incantesimo per classe e nome:')
+
+    def callback_cancel(self, update, context):
+        user = update.message.from_user
+        self._logger.info("User %s canceled the conversation.", user.first_name)
+        update.message.reply_text('Ciao! Spero di riverderti qui!',
+                                  reply_markup=ReplyKeyboardRemove())
+        return ConversationHandler.END
 
 
 if __name__ == '__main__':
