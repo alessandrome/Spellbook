@@ -2,8 +2,13 @@ import yaml
 import logging
 
 
-def set_logging(logign_level):
-    logging.basicConfig(level=logging.DEBUG,
+def set_logging(log_level=logging.INFO):
+    """
+    Create a logger.
+    :param log_level: Log level to user. See logging module for its levels
+    :return: Created Logger
+    """
+    logging.basicConfig(level=log_level,
                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     return logging.getLogger(__name__)
 
@@ -15,7 +20,6 @@ def get_environment():
     :return: Dictionary with environment variables
     :raise OSError:
     """
-    env_dict = None
     with open('env.yaml', 'r') as f:
         env_dict = yaml.load(f, Loader=yaml.FullLoader)
     return env_dict
