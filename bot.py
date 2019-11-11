@@ -4,8 +4,8 @@ import time
 import logging
 import botutils
 import menubuilder
-from telegram import utils, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, \
-    ReplyKeyboardRemove
+from telegram import utils, ChatAction, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, \
+    KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, CallbackQueryHandler, Filters
 from spellbook import Spellbook
 
@@ -22,33 +22,8 @@ LEVELS = range(10)
 def overwrite_last_message_decorator(fn):
     def wrapper(self, *args, **kwargs):
         self._delete_last_message()
-        fn(self, *args, **kwargs)
+        return fn(self, *args, **kwargs)
     return wrapper
-
-
-def main():
-    try:
-        spellbook_bot = SpellbookBot()
-    except OSError as ex:
-        sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
-    updater = spellbook_bot.start()
-
-    # Run the bot until you press Ctrl-C or the process receives SIGINT,
-    # SIGTERM or SIGABRT. This should be used most of the time, since
-    # start_polling() is non-blocking and will stop the bot gracefully.
-    # updater.idle()
-
-    while True:
-        user_input = input()
-        if user_input == 'start':
-            spellbook_bot.start()
-        elif user_input == 'stop':
-            spellbook_bot.stop()
-        elif user_input == 'exit':
-            spellbook_bot.stop()
-            exit()
-        else:
-            print('Command not found')
 
 
 class SpellbookBot:
@@ -85,6 +60,7 @@ class SpellbookBot:
     )
 
     def start(self):
+        """Start the bot."""
         if self._updater is None:
             # Create the Updater and pass it your bot's token.
             # Make sure to set use_context=True to use the new context based callbacks
@@ -101,6 +77,7 @@ class SpellbookBot:
         return self._updater
 
     def stop(self):
+        """Stop the bot."""
         if self._updater is not None:
             self._updater.stop()
             self._updater = None
@@ -168,14 +145,12 @@ class SpellbookBot:
         query = update.callback_query
         query.edit_message_text('Ricerca incantesimo per classe e nome:')
 
-    # @overwrite_last_message_decorator
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_level_select(self, update, context):
         self._logger.debug("Level selected. Trying to retrieve data")
         keyboard_levels = [('Lv. 0', LEVELS[0])]
         query = update.callback_query
-        update.edit_message_text(
-            chat_id=query.message.chat_id,
-            message_id=query.message.message_id,
+        query.edit_message_text(
             text="Fourth CallbackQueryHandler, Choose a route",
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 1))
         )
@@ -186,6 +161,31 @@ class SpellbookBot:
         update.message.reply_text('Ciao! Spero di riverderti qui!',
                                   reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
+
+
+def main():
+    try:
+        spellbook_bot = SpellbookBot()
+    except OSError as ex:
+        sys.exit("Be sure that \"env.yaml\" file exists and you have read access to it!")
+    updater = spellbook_bot.start()
+
+    # Run the bot until you press Ctrl-C or the process receives SIGINT,
+    # SIGTERM or SIGABRT. This should be used most of the time, since
+    # start_polling() is non-blocking and will stop the bot gracefully.
+    # updater.idle()
+
+    while True:
+        user_input = input()
+        if user_input == 'start':
+            spellbook_bot.start()
+        elif user_input == 'stop':
+            spellbook_bot.stop()
+        elif user_input == 'exit':
+            spellbook_bot.stop()
+            exit()
+        else:
+            print('Command not found')
 
 
 if __name__ == '__main__':

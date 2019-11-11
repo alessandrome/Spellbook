@@ -1,5 +1,6 @@
 import yaml
 import logging
+from functools import wraps
 
 
 def set_logging(log_level=logging.INFO):
@@ -39,3 +40,20 @@ def check_env_requirements(env_dict):
     if not env_dict or 'DB_PASSWORD' not in env_dict:
         errors_description += "Be sure to have the \"DB_PASSWORD\" value set in the \"env.yaml\" to correctly connect to the DB\n"
     return errors_description
+
+
+def send_action(action, class_method=False):
+    """Decorator. Sends `action` while processing func command."""
+    def decorator(func):
+        if class_method:
+            @wraps(func)
+            def command_func(self, update, context, *args, **kwargs):
+                context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=action)
+                return func(self, update, context, *args, **kwargs)
+        else:
+            @wraps(func)
+            def command_func(update, context, *args, **kwargs):
+                context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=action)
+                return func(update, context, *args, **kwargs)
+        return command_func
+    return decorator
