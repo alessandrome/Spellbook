@@ -19,6 +19,13 @@ BARBARIC, BARD, CLERIC, DRUID, MAGE, PALADIN, RANGER, WARLOCK, WIZARD = range(9)
 LEVELS = range(10)
 
 
+def overwrite_last_message_decorator(fn):
+    def wrapper(self, *args, **kwargs):
+        self._delete_last_message()
+        fn(self, *args, **kwargs)
+    return wrapper
+
+
 def main():
     try:
         spellbook_bot = SpellbookBot()
@@ -68,17 +75,14 @@ class SpellbookBot:
                 MENU: [
                     CallbackQueryHandler(self.callback_name_search, pattern='^{}$'.format(NAME)),
                     CallbackQueryHandler(self.callback_level_search, pattern='^{}$'.format(LEVEL)),
-                    CallbackQueryHandler(self.callback_name_level_search, pattern='^{}$'.format(NAME_LEVEL))
+                    CallbackQueryHandler(self.callback_class_level_search, pattern='^{}$'.format(NAME_LEVEL))
                 ],
-                LEVEL: [],
+                LEVEL: [
+                    CallbackQueryHandler(self.callback_level_select, pattern='^\\d$'),
+                ],
             },
             fallbacks=[CommandHandler('cancel', self.callback_cancel)]
     )
-
-    def _delete_last_message(self):
-        if self._last_message:
-            self._last_message.delete()
-            self._last_message = None
 
     def start(self):
         if self._updater is None:
@@ -91,9 +95,9 @@ class SpellbookBot:
             self._dispatcher.add_handler(self._conv_handler)
             self._dispatcher.add_error_handler(self._dispatcher_error_handler)
             self._updater.start_polling()
-            self._logger.info('Bot Started!')
+            self._logger.info('Bot Started')
         else:
-            self._logger.warning("The BOT is already Up!")
+            self._logger.warning("The BOT is already Up")
         return self._updater
 
     def stop(self):
@@ -107,6 +111,12 @@ class SpellbookBot:
 
     def _dispatcher_error_handler(self, update, context):
         self._logger.warning('Update "%s" caused error "%s"', update, context.error)
+
+    def _delete_last_message(self):
+        if self._last_message:
+            self._last_message.delete()
+            self._last_message = None
+            self._logger.debug("Deleted last searching inline keyboard")
 
     # Callback responses
     def callback_start(self, update, context):
@@ -136,6 +146,7 @@ class SpellbookBot:
             text='Seleziona il livello per cui cercare:',
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, 5)))
 
+    @overwrite_last_message_decorator
     def callback_level_search(self, update, context):
         self._logger.debug("Search by level")
         keyboard_levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]),
@@ -145,16 +156,29 @@ class SpellbookBot:
 
         query = update.callback_query
         bot = context.bot
-        bot.send_message(
+        self._last_message = bot.send_message(
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
             text='Seleziona il livello per cui cercare:',
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 5)))
+        return LEVEL
 
-    def callback_name_level_search(self, update, context):
+    def callback_class_level_search(self, update, context):
         self._logger.debug("Search by level name")
         query = update.callback_query
         query.edit_message_text('Ricerca incantesimo per classe e nome:')
+
+    # @overwrite_last_message_decorator
+    def callback_level_select(self, update, context):
+        self._logger.debug("Level selected. Trying to retrieve data")
+        keyboard_levels = [('Lv. 0', LEVELS[0])]
+        query = update.callback_query
+        update.edit_message_text(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text="Fourth CallbackQueryHandler, Choose a route",
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 1))
+        )
 
     def callback_cancel(self, update, context):
         user = update.message.from_user
