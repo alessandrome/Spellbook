@@ -10,7 +10,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 from spellbook import Spellbook
 
 # Set logging level
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.WARNING,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -106,6 +106,7 @@ class SpellbookBot:
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(reply_keyboard, 2)))
         return MENU
 
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_name_search(self, update, context):
         self._logger.debug("Search by name")
         query = update.callback_query
@@ -127,6 +128,7 @@ class SpellbookBot:
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, keyboard_columns)))
 
     @overwrite_last_message_decorator
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_level_search(self, update, context):
         self._logger.debug("Search by level")
         keyboard_levels = [('Lv. 0', LEVELS[0]), ('Lv. 1', LEVELS[1]), ('Lv. 2', LEVELS[2]), ('Lv. 3', LEVELS[3]),
@@ -143,6 +145,7 @@ class SpellbookBot:
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 5)))
         return LEVEL
 
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_class_level_search(self, update, context):
         self._logger.debug("Search by level name")
         query = update.callback_query
