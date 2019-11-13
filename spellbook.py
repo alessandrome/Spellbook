@@ -2,6 +2,8 @@ import pymysql
 pymysql.install_as_MySQLdb()  # This must be init here before import MySQLdb
 import MySQLdb
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import database
 
 
 class Spellbook:
@@ -24,6 +26,7 @@ class Spellbook:
         self.engine = create_engine(
             'mysql://{}:{}@{}:{}/{}'.format(self.user_name, self.user_pwd, self.url, self.db_port, self.db_name))
         self.engine_connection = self.engine.connect()
+        self.EngineSession = sessionmaker(bind=self.engine)
         # TODO: With SQLAlchemy this will not be more needed
         self.cn_object = MySQLdb.connect(
             self.url,
@@ -39,6 +42,10 @@ class Spellbook:
             self.cn_object.close()
         if self.cursor:
             self.cursor.close()
+
+    def get_classes(self):
+        session = self.EngineSession()
+        return session.query(database.CharacterClass).all()
 
     def get_spells_by_level(self, lvl):
         query = ("CALL `ottieniIncantesimiDiLivello`('{}');".format(str(lvl)))

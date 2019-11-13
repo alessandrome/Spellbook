@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-MENU, NAME, LEVEL, NAME_LEVEL = range(4)
+MENU, NAME, CHAR_CLASS, LEVEL, NAME_LEVEL = range(5)
 BARBARIC, BARD, CLERIC, DRUID, MAGE, PALADIN, RANGER, WARLOCK, WIZARD = range(9)
 LEVELS = range(10)
 
@@ -50,6 +50,7 @@ class SpellbookBot:
                 MENU: [
                     CallbackQueryHandler(self.callback_name_search, pattern='^{}$'.format(NAME)),
                     CallbackQueryHandler(self.callback_level_search, pattern='^{}$'.format(LEVEL)),
+                    CallbackQueryHandler(self.callback_class_search, pattern='^{}$'.format(CHAR_CLASS)),
                     CallbackQueryHandler(self.callback_class_level_search, pattern='^{}$'.format(NAME_LEVEL))
                 ],
                 LEVEL: [
@@ -96,9 +97,10 @@ class SpellbookBot:
             self._logger.debug("Deleted last searching inline keyboard")
 
     # Callback responses
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_start(self, update, context):
         self._logger.debug("Starting Spellbook bot")
-        reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe e Livello', NAME_LEVEL)]
+        reply_keyboard = [('Nome', NAME), ('Livello', LEVEL), ('Classe', CHAR_CLASS), ('Classe e Livello', NAME_LEVEL)]
         update.message.reply_text(
             'Ricerca incantesimo per:',
             reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(reply_keyboard, 2)))
@@ -109,19 +111,20 @@ class SpellbookBot:
         query = update.callback_query
         query.edit_message_text('Ricerca incantesimo per:')
 
+    @botutils.send_action(ChatAction.TYPING, True)
     def callback_class_search(self, update, context):
         self._logger.debug("Search by class")
-        keyboard_classes = [('Barbaro', BARBARIC), ('Bardo', BARD), ('Chierico', CLERIC), ('Druiro', DRUID),
-                            ('Mago', MAGE),
-                            ('Paladino', PALADIN), ('Ranger', RANGER), ('Stregone', WIZARD), ('Warlock', WARLOCK)]
+        character_classes = (self.spellbook.get_classes())
+        keyboard_classes = [(character_class.Nome, character_class.Nome) for character_class in character_classes]
+        keyboard_columns = int(len(keyboard_classes)/2 + 0.5)
 
         query = update.callback_query
         bot = context.bot
         bot.send_message(
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
-            text='Seleziona il livello per cui cercare:',
-            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, 5)))
+            text='Seleziona la classe per cui cercare:',
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_classes, keyboard_columns)))
 
     @overwrite_last_message_decorator
     def callback_level_search(self, update, context):
