@@ -1,1 +1,1 @@
-from database.tables import *
+from database.tables import Base, CharacterClass, Spell, CharacterClassSpellPivot
