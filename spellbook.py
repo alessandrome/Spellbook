@@ -1,6 +1,7 @@
 import pymysql
 pymysql.install_as_MySQLdb()  # This must be init here before import MySQLdb
 import MySQLdb
+import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import database
@@ -50,20 +51,8 @@ class Spellbook:
     def get_spells_by_level(self, lvl):
         query = ("CALL `ottieniIncantesimiDiLivello`('{}');".format(str(lvl)))
         result = self.engine_connection.execute(query)
-        content_list = []
-        for row in result:
-            content_list.append({
-                "Classe": row[8],
-                "Nome": row[0],
-                "Tipo": row[1],
-                "Livello": row[2],
-                "TempoDiLancio": row[3],
-                "Componenti": row[4],
-                "Durata": row[5],
-                "Gittata": row[6],
-                "Descrizione": row[7],
-            })
-        return content_list
+        session = self.EngineSession()
+        return session.query(database.Spell).filter_by(Livello=lvl).order_by(sqlalchemy.asc(database.Spell.Nome)).all()
 
     def get_spells_by_level_class(self, character_class, lvl):
         query = ("CALL `ottieniIncantesimiPerClasseDiLivello`('{}','{}');".format(character_class, str(lvl)))

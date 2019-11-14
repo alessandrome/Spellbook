@@ -1,3 +1,1 @@
-from database.characterclass import CharacterClass
-from database.characterclass_spell_pivot import CharacterClassSpellPivot
-from database.spell import Spell
+from database.tables import *

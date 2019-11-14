@@ -154,11 +154,15 @@ class SpellbookBot:
     @botutils.send_action(ChatAction.TYPING, True)
     def callback_level_select(self, update, context):
         self._logger.debug("Level selected. Trying to retrieve data")
-        keyboard_levels = [('Lv. 0', LEVELS[0])]
         query = update.callback_query
-        query.edit_message_text(
-            text="Fourth CallbackQueryHandler, Choose a route",
-            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_levels, 1))
+        spells = self.spellbook.get_spells_by_level(query.data)
+        keyboard_spells = [('{} [Lvl. {}]'.format(spell.Nome, spell.Livello), spell.Nome) for spell in spells]
+        bot = context.bot
+        self._last_message = bot.send_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text="Ecco gli incantesimi della ricerca:",
+            reply_markup=InlineKeyboardMarkup(menubuilder.build_tuple_menu(keyboard_spells, 1))
         )
 
     def callback_cancel(self, update, context):
