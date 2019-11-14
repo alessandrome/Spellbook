@@ -7,10 +7,11 @@ Base = declarative_base()
 
 
 class CharacterClassSpellPivot(Base):
-    __tablename__ = 'classeincantesimi'
+    __tablename__ = 'classeincantesimo'
     NomeIncantesimo = Column(String(100), ForeignKey('incantesimi.Nome'), primary_key=True)
     NomeClasse = Column(String(45), ForeignKey('classe.Nome'), primary_key=True)
     Classe = relationship("CharacterClass")
+    Incantesimo = relationship("Spell")
 
 
 class Spell(Base):
@@ -23,7 +24,7 @@ class Spell(Base):
     Componenti = Column(String(512))
     Durata = Column(String(45))
     Descrizione = Column(Text)
-    Classi = relationship('CharacterClassSpellPivot')
+    Classi = relationship('CharacterClass', secondary='classeincantesimo', backref='Incantesimi')
 
 
 class CharacterClass(Base):

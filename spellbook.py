@@ -49,28 +49,16 @@ class Spellbook:
         return session.query(database.CharacterClass).all()
 
     def get_spells_by_level(self, lvl):
-        query = ("CALL `ottieniIncantesimiDiLivello`('{}');".format(str(lvl)))
-        result = self.engine_connection.execute(query)
         session = self.EngineSession()
         return session.query(database.Spell).filter_by(Livello=lvl).order_by(sqlalchemy.asc(database.Spell.Nome)).all()
 
     def get_spells_by_level_class(self, character_class, lvl):
-        query = ("CALL `ottieniIncantesimiPerClasseDiLivello`('{}','{}');".format(character_class, str(lvl)))
-        result = self.engine_connection.execute(query)
-        content_list = []
-        for row in result:
-            content_list.append({
-                "Classe": row[8],
-                "Nome": row[0],
-                "Tipo": row[1],
-                "Livello": row[2],
-                "TempoDiLancio": row[3],
-                "Componenti": row[4],
-                "Durata": row[5],
-                "Gittata": row[6],
-                "Descrizione": row[7],
-            })
-        return content_list
+        session = self.EngineSession()
+        return session.query(database.Spell)\
+            .filter(database.Spell.Livello==lvl)\
+            .filter(database.CharacterClass.Nome==character_class)\
+            .order_by(sqlalchemy.asc(database.Spell.Nome))\
+            .all()
 
     def get_spells_by_class(self, character_class):
         query = ("CALL `ottieniIncantesimiPerClasse`('{}');".format(character_class))
