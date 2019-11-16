@@ -30,3 +30,16 @@ class Spell(Base):
 class CharacterClass(Base):
     __tablename__ = 'classe'
     Nome = Column(String, primary_key=True)
+
+
+class User(Base):
+    __tablename__ = 'user'
+    IdUser = Column(Integer, primary_key=True)
+
+
+class Favourite(Base):
+    __tablename__ = 'preferiti'
+    IdUser = Column(Integer, ForeignKey('user.IdUser'), primary_key=True)
+    NomeIncantesimo = Column(String(100), ForeignKey('incantesimi.Nome'), primary_key=True)
+    User = relationship('User')
+    Incantesimo = relationship('Spell')
