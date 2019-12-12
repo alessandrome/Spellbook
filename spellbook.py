@@ -1,6 +1,10 @@
 import pymysql
 pymysql.install_as_MySQLdb()  # This must be init here before import MySQLdb
 import MySQLdb
+import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import database
 
 
 class Spellbook:
@@ -20,6 +24,11 @@ class Spellbook:
         # Connect to DB
         self.cn_object = None
         self.cursor = None
+        self.engine = create_engine(
+            'mysql://{}:{}@{}:{}/{}'.format(self.user_name, self.user_pwd, self.url, self.db_port, self.db_name))
+        self.engine_connection = self.engine.connect()
+        self.EngineSession = sessionmaker(bind=self.engine)
+        # TODO: With SQLAlchemy this will not be more needed
         self.cn_object = MySQLdb.connect(
             self.url,
             self.user_name,
@@ -35,131 +44,99 @@ class Spellbook:
         if self.cursor:
             self.cursor.close()
 
-    def ottieniIncantesimiDiLivello(self,lvl):
-        query = ("CALL `ottieniIncantesimiDiLivello`('"+str(lvl)+"');")
+    def get_classes(self):
+        session = self.EngineSession()
+        return session.query(database.CharacterClass).all()
+
+    def get_spells_by_level(self, lvl):
+        session = self.EngineSession()
+        return session.query(database.Spell).filter_by(Livello=lvl).order_by(sqlalchemy.asc(database.Spell.Nome)).all()
+
+    def get_spells_by_level_class(self, character_class, lvl):
+        session = self.EngineSession()
+        return session.query(database.Spell)\
+            .filter(database.Spell.Livello == lvl)\
+            .filter(database.CharacterClass.Nome == character_class)\
+            .order_by(sqlalchemy.asc(database.Spell.Nome))\
+            .all()
+
+    def get_spells_by_class(self, character_class):
+        session = self.EngineSession()
+        return session.query(database.Spell) \
+            .filter(database.CharacterClass.Nome == character_class) \
+            .order_by(sqlalchemy.asc(database.Spell.Nome)) \
+            .all()
+
+    def get_spells_by_name(self, name):
+        query = ("CALL `ottieniIncantesimiPerNome`('{}');".format(name))
         self.cursor.execute(query)
-        contentList = []
-        aux = {}
+        content_list = []
         for row in self.cursor:
-            aux["Classe"] = row[8]
-            aux["Nome"] = row[0]
-            aux["Tipo"] = row[1]
-            aux["Livello"] = row[2]
-            aux["TempoDiLancio"] = row[3]
-            aux["Componenti"] = row[4]
-            aux["Durata"] = row[5]
-            aux["Gittata"] = row[6]
-            aux["Descrizione"] = row[7]
-            
-            contentList.append(aux)
-            aux = {}
-        return contentList
-    def ottieniIncantesimiPerClasseDiLivello(self,classe,lvl):
-        query = ("CALL `ottieniIncantesimiPerClasseDiLivello`('"+classe+"','"+str(lvl)+"');")
-        self.cursor.execute(query)
-        contentList = []
-        aux = {}
-        for row in self.cursor:
-            aux["Classe"] = row[8]
-            aux["Nome"] = row[0]
-            aux["Tipo"] = row[1]
-            aux["Livello"] = row[2]
-            aux["TempoDiLancio"] = row[3]
-            aux["Componenti"] = row[4]
-            aux["Durata"] = row[5]
-            aux["Gittata"] = row[6]
-            aux["Descrizione"] = row[7]
-            
-            contentList.append(aux)
-            aux = {}
-        return contentList
-    def ottieniIncantesimiPerClasse(self,classe):
-        query = ("CALL `ottieniIncantesimiPerClasse`('"+classe+"');")
-        self.cursor.execute(query)
-        contentList = []
-        aux = {}
-        for row in self.cursor:
-            aux["Classe"] = row[8]
-            aux["Nome"] = row[0]
-            aux["Tipo"] = row[1]
-            aux["Livello"] = row[2]
-            aux["TempoDiLancio"] = row[3]
-            aux["Componenti"] = row[4]
-            aux["Durata"] = row[5]
-            aux["Gittata"] = row[6]
-            aux["Descrizione"] = row[7]
-            
-            contentList.append(aux)
-            aux = {}
-        return contentList
-    def ottieniIncantesimiPerNome(self,nome):
-        query = ("CALL `ottieniIncantesimiPerNome`('"+nome+"');")
-        self.cursor.execute(query)
-        contentList = []
-        aux = {}
-        for row in self.cursor:
-            aux["Classe"] = row[8]
-            aux["Nome"] = row[0]
-            aux["Tipo"] = row[1]
-            aux["Livello"] = row[2]
-            aux["TempoDiLancio"] = row[3]
-            aux["Componenti"] = row[4]
-            aux["Durata"] = row[5]
-            aux["Gittata"] = row[6]
-            aux["Descrizione"] = row[7]
-            
-            contentList.append(aux)
-            aux = {}
-        return contentList
-    def aggiungiUtente(self,userId):
+            content_list.append({
+                "Classe": row[8],
+                "Nome": row[0],
+                "Tipo": row[1],
+                "Livello": row[2],
+                "TempoDiLancio": row[3],
+                "Componenti": row[4],
+                "Durata": row[5],
+                "Gittata": row[6],
+                "Descrizione": row[7],
+            })
+        return content_list
+
+    # TODO: RE-factory from here
+    def add_user(self, user_id):
         try:
-            query = ("CALL `aggiungiUtente`('"+str(userId)+"');")
-            self.cursor.execute(query)
-            self.cn_object.commit()
+            query = ("CALL `aggiungiUtente`('{}');".format(str(user_id)))
+            self.engine_connection.execute(query)
+            # self.cn_object.commit()
             return True
         except:
             return False
-    def aggiungiPreferiti(self,userId,incantesimo):
+
+    def add_favourite(self, user_id, spell):
         try:
-            query = ("CALL `aggiungiPreferiti`('"+str(userId)+"','"+incantesimo+"');")
-            self.cursor.execute(query)
-            self.cn_object.commit()
-            return True;
+            query = ("CALL `aggiungiPreferiti`('{}','{}');".format(str(user_id), spell))
+            self.engine_connection.execute(query)
+            # self.cn_object.commit()
+            return True
         except:
             return False
-    def rimuoviPreferiti(self,userId,incantesimo):
+
+    def remove_favourite(self, user_id, spell):
         try:
-            query = ("CALL `rimuoviPreferiti`('"+str(userId)+"','"+incantesimo+"');")
-            self.cursor.execute(query)
-            self.cn_object.commit()
-            return True;
+            query = ("CALL `rimuoviPreferiti`('{}','{}');".format(user_id, spell))
+            self.engine_connection.execute(query)
+            # self.cn_object.commit()
+            return True
         except:
             return False
-    def ottieniPreferiti(self, idUser):
-        query = ("CALL `ottieniPreferiti`('"+str(idUser)+"');")
-        self.cursor.execute(query)
-        contentList = []
-        aux = {}
+
+    def get_favourites(self, user_id):
+        query = ("CALL `ottieniPreferiti`('{}');".format(user_id))
+        self.engine_connection.execute(query)
+        content_list = []
         for row in self.cursor:
-            aux["Classe"] = row[8]
-            aux["Nome"] = row[0]
-            aux["Tipo"] = row[1]
-            aux["Livello"] = row[2]
-            aux["TempoDiLancio"] = row[3]
-            aux["Componenti"] = row[4]
-            aux["Durata"] = row[5]
-            aux["Gittata"] = row[6]
-            aux["Descrizione"] = row[7]
-            
-            contentList.append(aux)
-            aux = {}
-        return contentList
-    def stampaRisultato(self,content):
-        for tupla in content:
-            for nomeColonna, valore in tupla.items():
-                print(nomeColonna+" : "+str(valore))
-        
-        
+            content_list.append({
+                "Classe": row[8],
+                "Nome": row[0],
+                "Tipo": row[1],
+                "Livello": row[2],
+                "TempoDiLancio": row[3],
+                "Componenti": row[4],
+                "Durata": row[5],
+                "Gittata": row[6],
+                "Descrizione": row[7],
+            })
+        return content_list
+
+    def print_result(self, content):
+        for row in content:
+            for column_name, value in row.items():
+                print('{}: {}'.format(column_name, value))
+
+
 '''
 obj = Spellbook("standard","guruguru","localhost","dnd_5_incantesimi")
 
