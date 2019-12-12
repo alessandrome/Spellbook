@@ -1,1 +1,1 @@
-from database.tables import Base, CharacterClass, Spell, CharacterClassSpellPivot, User, Favourite
+from database.models import Base, CharacterClass, Spell, CharacterClassSpellPivot, User, Favourite
