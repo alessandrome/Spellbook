@@ -6,40 +6,42 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
-class CharacterClassSpellPivot(Base):
-    __tablename__ = 'classeincantesimo'
-    NomeIncantesimo = Column(String(100), ForeignKey('incantesimi.Nome'), primary_key=True)
-    NomeClasse = Column(String(45), ForeignKey('classe.Nome'), primary_key=True)
-    Classe = relationship("CharacterClass")
-    Incantesimo = relationship("Spell")
-
-
 class Spell(Base):
-    __tablename__ = 'incantesimi'
-    Nome = Column(String(100), primary_key=True)
-    Tipo = Column(String(45))
-    Livello = Column(Integer)
-    TempoDiLancio = Column(String(255))
-    Gittata = Column(String(100))
-    Componenti = Column(String(512))
-    Durata = Column(String(45))
-    Descrizione = Column(Text)
-    Classi = relationship('CharacterClass', secondary='classeincantesimo', backref='Incantesimi')
+    __tablename__ = 'spells'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), index=True)
+    type = Column(String(45))
+    level = Column(Integer)
+    casting_time = Column(String(255))
+    range = Column(String(100))
+    components = Column(String(512))
+    duration = Column(String(45))
+    description = Column(Text)
+    classes = relationship('CharacterClass', secondary='class_spell', backref='spells')
 
 
 class CharacterClass(Base):
-    __tablename__ = 'classe'
-    Nome = Column(String, primary_key=True)
+    __tablename__ = 'classes'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(45), index=True)
+
+
+class CharacterClassSpellPivot(Base):
+    __tablename__ = 'class_spell'
+    spell_id = Column(Integer, ForeignKey('spells.id'), primary_key=True)
+    class_id = Column(Integer, ForeignKey('classes.id'), primary_key=True)
+    character_class = relationship("CharacterClass")
+    spell = relationship("Spell")
 
 
 class User(Base):
-    __tablename__ = 'user'
-    IdUser = Column(Integer, primary_key=True)
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
 
 
 class Favourite(Base):
-    __tablename__ = 'preferiti'
-    IdUser = Column(Integer, ForeignKey('user.IdUser'), primary_key=True)
-    NomeIncantesimo = Column(String(100), ForeignKey('incantesimi.Nome'), primary_key=True)
-    User = relationship('User')
-    Incantesimo = relationship('Spell')
+    __tablename__ = 'favourites'
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    spell_id = Column(Integer, ForeignKey('spells.id'), primary_key=True)
+    user = relationship('User')
+    spell = relationship('Spell')
